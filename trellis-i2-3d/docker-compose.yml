@@ -1,0 +1,36 @@
+# docker compose up --build
+#
+# Mounts ./weights so the ~4 GB checkpoint is downloaded once and survives
+# container rebuilds.  The GPU reservation is required: TRELLIS will refuse to
+# run without a CUDA device (it falls back to the smoke-test backend).
+services:
+  trellis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trellis-i2-3d:latest
+    ports:
+      - "8100:8100"
+    environment:
+      TRELLIS_MODEL: microsoft/TRELLIS-image-large
+      ATTN_BACKEND: xformers
+      SPCONV_ALGO: native
+      TRELLIS_JOB_TTL_S: "3600"
+      HF_HOME: /app/weights/hf
+    volumes:
+      - ./weights:/app/weights
+      - ./outputs:/app/outputs
+    shm_size: "8gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
