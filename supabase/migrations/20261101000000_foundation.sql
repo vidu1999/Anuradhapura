@@ -1,0 +1,48 @@
+-- Phase 1 foundation for Supabase. Apply with the Supabase CLI; never expose service_role keys.
+create extension if not exists postgis with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
+create type public.editorial_role as enum ('super_admin','researcher','editor','asset_manager','translator');
+create type public.publication_state as enum ('draft','in_review','published','rejected');
+create table public.users (id uuid primary key references auth.users(id) on delete cascade, created_at timestamptz not null default now());
+create table public.user_profiles (user_id uuid primary key references public.users(id) on delete cascade, display_name text, preferred_language text not null default 'en');
+create table public.user_roles (user_id uuid not null references public.users(id) on delete cascade, role public.editorial_role not null, primary key(user_id,role));
+create function public.has_role(roles public.editorial_role[]) returns boolean language sql stable security definer set search_path = public as $$ select exists(select 1 from public.user_roles where user_id = auth.uid() and role = any(roles)) $$;
+revoke all on function public.has_role(public.editorial_role[]) from public;
+grant execute on function public.has_role(public.editorial_role[]) to anon, authenticated;
+create table public.heritage_categories (id uuid primary key default gen_random_uuid(), name text not null unique);
+create table public.historical_periods (id uuid primary key default gen_random_uuid(), name text not null, description text);
+create table public.heritage_sites (id uuid primary key default gen_random_uuid(), name text not null, category_id uuid references public.heritage_categories, period_id uuid references public.historical_periods, location extensions.geography(point,4326), description text, access_guidance text, confidence text, state public.publication_state not null default 'draft', created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+create index heritage_sites_location_gix on public.heritage_sites using gist(location);
+create table public.heritage_translations (id uuid primary key default gen_random_uuid(), site_id uuid not null references public.heritage_sites on delete cascade, language text not null, name text not null, description text, unique(site_id,language));
+create table public.historical_sources (id uuid primary key default gen_random_uuid(), title text not null, url text, citation text, license text);
+create table public.site_sources (site_id uuid references public.heritage_sites on delete cascade, source_id uuid references public.historical_sources on delete cascade, primary key(site_id,source_id));
+create table public.historical_events (id uuid primary key default gen_random_uuid(), site_id uuid references public.heritage_sites on delete cascade, period_id uuid references public.historical_periods, source_id uuid references public.historical_sources, title text not null, description text, interpretation_label text);
+create table public.site_photographs (id uuid primary key default gen_random_uuid(), site_id uuid not null references public.heritage_sites on delete cascade, storage_path text not null, attribution text, license text, source_id uuid references public.historical_sources);
+create table public.site_3d_assets (id uuid primary key default gen_random_uuid(), site_id uuid not null references public.heritage_sites on delete cascade, storage_path text not null, attribution text, license text, interpretation_label text not null, source_id uuid references public.historical_sources);
+create table public.ar_experiences (id uuid primary key default gen_random_uuid(), site_id uuid not null references public.heritage_sites on delete cascade, asset_id uuid references public.site_3d_assets, enabled boolean not null default false, instructions text);
+create table public.ar_anchors (id uuid primary key default gen_random_uuid(), experience_id uuid not null references public.ar_experiences on delete cascade, location extensions.geography(point,4326), altitude_m double precision, heading_degrees double precision, accuracy_notes text);
+create table public.audio_guides (id uuid primary key default gen_random_uuid(), site_id uuid not null references public.heritage_sites on delete cascade, language text not null, storage_path text not null, attribution text, license text);
+create table public.tourist_routes (id uuid primary key default gen_random_uuid(), owner_id uuid not null references public.users on delete cascade, title text not null, created_at timestamptz not null default now());
+create table public.route_stops (route_id uuid references public.tourist_routes on delete cascade, site_id uuid references public.heritage_sites, position integer not null check(position >= 0), primary key(route_id,position));
+create table public.user_favorites (user_id uuid references public.users on delete cascade, site_id uuid references public.heritage_sites on delete cascade, primary key(user_id,site_id));
+create table public.user_visits (id uuid primary key default gen_random_uuid(), user_id uuid not null references public.users on delete cascade, site_id uuid not null references public.heritage_sites, visited_at timestamptz not null default now());
+create table public.user_submissions (id uuid primary key default gen_random_uuid(), user_id uuid not null references public.users on delete cascade, name text not null, description text not null, location extensions.geography(point,4326), evidence text, reference_url text, category_id uuid references public.heritage_categories, state public.publication_state not null default 'draft', created_at timestamptz not null default now());
+create table public.content_reviews (id uuid primary key default gen_random_uuid(), submission_id uuid not null references public.user_submissions on delete cascade, reviewer_id uuid not null references public.users, decision text not null, notes text, created_at timestamptz not null default now());
+create table public.reviews (id uuid primary key default gen_random_uuid(), user_id uuid not null references public.users on delete cascade, site_id uuid not null references public.heritage_sites, body text not null, state public.publication_state not null default 'draft');
+create table public.app_settings (key text primary key, value jsonb not null);
+-- All tables default-deny. Policies below intentionally expose only published records and personal data.
+do $$ declare t text; begin for t in select tablename from pg_tables where schemaname='public' loop execute format('alter table public.%I enable row level security',t); end loop; end $$;
+create policy published_sites on public.heritage_sites for select using (state='published');
+create policy staff_sites on public.heritage_sites for all to authenticated using (public.has_role(array['super_admin','researcher','editor']::public.editorial_role[])) with check (public.has_role(array['super_admin','researcher','editor']::public.editorial_role[]));
+create policy read_categories on public.heritage_categories for select using (true);
+create policy read_periods on public.historical_periods for select using (true);
+create policy own_user on public.users for select to authenticated using (id=auth.uid());
+create policy own_profile on public.user_profiles for all to authenticated using (user_id=auth.uid()) with check (user_id=auth.uid());
+create policy own_favorites on public.user_favorites for all to authenticated using (user_id=auth.uid()) with check (user_id=auth.uid());
+create policy own_visits on public.user_visits for all to authenticated using (user_id=auth.uid()) with check (user_id=auth.uid());
+create policy own_routes on public.tourist_routes for all to authenticated using (owner_id=auth.uid()) with check (owner_id=auth.uid());
+create policy own_stops on public.route_stops for all to authenticated using (exists(select 1 from public.tourist_routes r where r.id=route_id and r.owner_id=auth.uid())) with check (exists(select 1 from public.tourist_routes r where r.id=route_id and r.owner_id=auth.uid()));
+create policy own_submissions_read on public.user_submissions for select to authenticated using (user_id=auth.uid());
+create policy own_submissions_insert on public.user_submissions for insert to authenticated with check (user_id=auth.uid() and state='draft');
+create policy staff_submissions on public.user_submissions for select to authenticated using (public.has_role(array['super_admin','researcher']::public.editorial_role[]));
+-- Further editorial, asset, translation, publication and storage policies must be reviewed before enabling those workflows.
