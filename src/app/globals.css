@@ -17,3 +17,4 @@
 /* MapLibre also sets .maplibregl-map { position: relative }. Give the live
    map an explicit, higher-specificity size regardless of stylesheet load order. */
 .navigation-view .navigation-map{position:absolute;inset:0;width:100%;height:100%}
+.building-caption{position:absolute;z-index:2;left:8px;bottom:24px;padding:4px 6px;border-radius:4px;background:#10241ee8;color:#fff;font-size:9px;max-width:230px;pointer-events:none}.quest-map-panel:not(.expanded) .building-caption{display:none}
