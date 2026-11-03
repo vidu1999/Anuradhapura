@@ -34,4 +34,4 @@ The catalog records use approximate public reference coordinates where available
 
 If WebGL2 is unavailable, 3D navigation automatically falls back to the 2D map without stopping GPS or the road route. To try 3D, update the browser and graphics driver and enable hardware acceleration in browser settings, then restart the browser. WebGL2 may still be unsupported on some devices; 2D remains available. The React DevTools console message is informational, not an app error.
 
-The navigation screen includes a cinematic AI-generated background for atmosphere. It is explicitly labelled as an illustration: it is not live terrain, AR, a precise reconstruction, or a depiction of the user's surroundings. The inset map is the real GPS/map view; expand it to inspect the route. On devices without WebGL2 the inset switches to the 2D map without stopping GPS.
+The navigation screen displays the live map as its main view. Elevation tiles provide terrain when available; OSM tiles are a map, not satellite imagery or a photorealistic 3D reconstruction. On devices without WebGL2, the view falls back to the 2D map without stopping GPS.
