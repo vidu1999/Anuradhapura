@@ -7,4 +7,10 @@ const {characterMotion,findMotionClips}=await import(`data:text/javascript;base6
 test('unknown, invalid and stationary speed use wait',()=>{for(const speed of [null,undefined,NaN,Infinity,-1,0,.49])assert.equal(characterMotion(speed),'wait')});
 test('reported speed selects walk and run without claiming transport mode',()=>{assert.equal(characterMotion(.5),'walk');assert.equal(characterMotion(2.99),'walk');assert.equal(characterMotion(3),'run');assert.equal(characterMotion(20),'run')});
 test('clips must be named for their motion',()=>{const clips=[{name:'Wait'},{name:'Walking'},{name:'Running'}];assert.deepEqual(findMotionClips(clips),{wait:clips[0],walk:clips[1],run:clips[2]});assert.equal(findMotionClips([{name:'Animation'}]).run,undefined)});
-test('supplied character has a compatible rig',()=>{const buffer=readFileSync('public/models/malecharacter.glb');assert.equal(buffer.toString('ascii',0,4),'glTF');const length=buffer.readUInt32LE(12);const gltf=JSON.parse(buffer.subarray(20,20+length).toString('utf8'));assert.ok(gltf.skins?.length);for(const name of ['LeftUpLeg','RightUpLeg'])assert.ok(gltf.nodes.some(node=>node.name?.includes(name)))});
+test('supplied GLB contains usable idle, walk and run animation tracks',()=>{
+ const buffer=readFileSync('public/models/malecharacter.glb');assert.equal(buffer.toString('ascii',0,4),'glTF');
+ const length=buffer.readUInt32LE(12);const gltf=JSON.parse(buffer.subarray(20,20+length).toString('utf8'));
+ assert.ok(gltf.skins?.length);const clips=findMotionClips(gltf.animations??[]);
+ assert.equal(clips.wait?.name,'idle');assert.equal(clips.walk?.name,'walk');assert.equal(clips.run?.name,'run');
+ for(const clip of [clips.wait,clips.walk,clips.run])assert.ok(clip.channels?.length>0);
+});

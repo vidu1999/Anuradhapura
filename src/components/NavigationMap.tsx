@@ -35,7 +35,7 @@ function createAvatar(report:(message:string)=>void){
   let mixer:THREE.AnimationMixer|null=null,active:THREE.AnimationAction|null=null;let actions:Partial<Record<CharacterMotion,THREE.AnimationAction>>={};
   let proceduralBones:Array<{bone:THREE.Bone;rest:THREE.Quaternion;sign:number}>=[];let proceduralRoot:THREE.Group|null=null;
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const selectAction=()=>{if(!mixer||reduced)return;const next=actions[motion];if(next&&next!==active){next.reset().play();if(active)active.crossFadeTo(next,.25,false);active=next}};
+  const selectAction=()=>{if(!mixer)return;const next=actions[reduced?'wait':motion];if(next&&next!==active){next.reset().play();if(active)active.crossFadeTo(next,.25,false);active=next;if(reduced)mixer.update(0)}};
   const draco=new DRACOLoader();draco.setDecoderPath('/draco/');
   new GLTFLoader().setDRACOLoader(draco).load('/models/malecharacter.glb',gltf=>{
     if(disposed){disposeAvatarObject(gltf.scene);return}
@@ -44,7 +44,7 @@ function createAvatar(report:(message:string)=>void){
     if(!Number.isFinite(size.y)||size.y<=0){disposeAvatarObject(gltf.scene);report('Character model has no visible geometry. Showing the illustrative fallback.');return}
     const wrapper=new THREE.Group();const scale=2.2/size.y;gltf.scene.scale.multiplyScalar(scale);gltf.scene.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);wrapper.add(gltf.scene);person.remove(fallback);disposeAvatarObject(fallback);person.add(wrapper);
     if(clips.wait&&clips.walk&&clips.run){
-      mixer=new THREE.AnimationMixer(gltf.scene);actions={wait:mixer.clipAction(clips.wait),walk:mixer.clipAction(clips.walk),run:mixer.clipAction(clips.run)};selectAction();report('Character model loaded. Animation uses reported GPS speed.');
+      mixer=new THREE.AnimationMixer(gltf.scene);actions={wait:mixer.clipAction(clips.wait),walk:mixer.clipAction(clips.walk),run:mixer.clipAction(clips.run)};selectAction();report('Character loaded with authored idle, walk and run clips. Animation uses reported GPS speed.');
     }else{
       const bones:Array<{bone:THREE.Bone;rest:THREE.Quaternion;sign:number}>=[];
       gltf.scene.traverse(o=>{if(o instanceof THREE.Bone){let sign=0;if(/leftupleg/i.test(o.name))sign=1;else if(/rightupleg/i.test(o.name))sign=-1;else if(/leftarm$/i.test(o.name))sign=-.6;else if(/rightarm$/i.test(o.name))sign=.6;if(sign)bones.push({bone:o,rest:o.quaternion.clone(),sign})}});
