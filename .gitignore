@@ -1,7 +1,7 @@
 node_modules/
 .next/
+out/
 .env*
 !.env.example
-coverage/
-public/maplibre/
 *.tsbuildinfo
+.DS_Store
