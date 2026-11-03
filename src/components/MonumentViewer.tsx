@@ -21,6 +21,8 @@ function disposeObject(object:THREE.Object3D){object.traverse(o=>{if(o instanceo
 type Props={title:string;category:string;description:string;source:string;modelUrl?:string;onClose:()=>void};
 export default function MonumentViewer({title,category,description,source,modelUrl,onClose}:Props){
   const host=useRef<HTMLDivElement>(null);
+  const controlsRef=useRef<OrbitControls|null>(null);
+  const [rotating,setRotating]=useState(false);
   const [status,setStatus]=useState(modelUrl?'Loading supplied model…':'Generic illustration ready.');
   const [loaded,setLoaded]=useState(false);
   useEffect(()=>{
@@ -31,7 +33,7 @@ export default function MonumentViewer({title,category,description,source,modelU
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0x203c2d);element.appendChild(renderer.domElement);
     const scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(40,1,.01,1000);camera.position.set(4,3,5);
     scene.add(new THREE.HemisphereLight(0xffffff,0x536c52,2));const light=new THREE.DirectionalLight(0xffe4b2,2);light.position.set(4,8,5);scene.add(light);
-    const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=.05;controls.maxDistance=1000;
+    const controls=new OrbitControls(camera,renderer.domElement);controlsRef.current=controls;controls.enableDamping=true;controls.autoRotateSpeed=1;controls.minDistance=.05;controls.maxDistance=1000;
     let disposed=false;
     const draco = new DRACOLoader();draco.setDecoderPath('/draco/');
     const fallback=()=>{if(!disposed)scene.add(illustration())};
@@ -44,8 +46,10 @@ export default function MonumentViewer({title,category,description,source,modelU
     },undefined,()=>{fallback();if(!disposed)setStatus('Model could not be loaded. Showing a generic illustration instead.')})}else fallback();
     const resize=()=>{const w=element.clientWidth,h=element.clientHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()};const observer=new ResizeObserver(resize);observer.observe(element);resize();
     let frame=0;const render=()=>{controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(render)};render();
-    return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();controls.dispose();draco.dispose();disposeObject(scene);renderer.dispose();renderer.domElement.remove()};
+    return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();controlsRef.current=null;controls.dispose();draco.dispose();disposeObject(scene);renderer.dispose();renderer.domElement.remove()};
   },[modelUrl]);
+  useEffect(()=>{setRotating(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)},[]);
+  useEffect(()=>{if(controlsRef.current)controlsRef.current.autoRotate=rotating},[rotating]);
   useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[onClose]);
-  return <div className="modal-backdrop" onClick={onClose}><section className="viewer-panel" role="dialog" aria-modal="true" aria-labelledby="viewer-title" onClick={e=>e.stopPropagation()}><header className="viewer-header"><div><span className="eyebrow">INTERACTIVE 3D HERITAGE</span><h2 id="viewer-title">{title}</h2><span className="category-tag">{category}</span></div><button className="close" onClick={onClose} aria-label="Close 3D viewer">×</button></header><div className="viewer-canvas" ref={host}/><p role="status">{status}</p><p className="viewer-warning">{loaded?'Model supplied by the operator; historical accuracy, provenance and rights must be verified.':'Generic artistic illustration only. This is not a model of the selected site or a measured archaeological reconstruction.'}</p><p>{description} <a className="source-link" href={source} target="_blank" rel="noreferrer">Read source ↗</a></p><p>Drag to rotate · Scroll or pinch to zoom · Right-drag to pan.</p></section></div>;
+  return <div className="modal-backdrop" onClick={onClose}><section className="viewer-panel" role="dialog" aria-modal="true" aria-labelledby="viewer-title" onClick={e=>e.stopPropagation()}><header className="viewer-header"><div><span className="eyebrow">INTERACTIVE 3D HERITAGE</span><h2 id="viewer-title">{title}</h2><span className="category-tag">{category}</span></div><button className="close" onClick={onClose} aria-label="Close 3D viewer">×</button></header><div className="viewer-canvas" ref={host}/><p role="status">{status}</p><p className="viewer-warning">{loaded?'Model supplied by the operator; historical accuracy, provenance and rights must be verified.':'Generic artistic illustration only. This is not a model of the selected site or a measured archaeological reconstruction.'}</p><p>{description} <a className="source-link" href={source} target="_blank" rel="noreferrer">Read source ↗</a></p><button className="viewer-rotation" onClick={()=>setRotating(value=>!value)} aria-pressed={rotating}>{rotating?"Pause rotation":"Start rotation"}</button><p>Drag to rotate · Scroll or pinch to zoom · Right-drag to pan.</p></section></div>;
 }
