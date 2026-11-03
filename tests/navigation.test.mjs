@@ -18,3 +18,11 @@ test('OSM building data is used for actual 3D extrusions with attribution',()=>{
  assert.match(source,/openstreetmap\.org\/copyright/);
  assert.match(source,/coverage and heights may be approximate/);
 });
+test('character marker has a decorative green halo without changing GPS position',()=>{
+ const navigation=readFileSync('src/components/NavigationMap.tsx','utf8');
+ const css=readFileSync('src/app/globals.css','utf8');
+ assert.match(navigation,/element:avatar\.current\.marker/);
+ assert.match(navigation,/marker\.appendChild\(canvas\)/);
+ assert.match(css,/\.navigation-avatar-marker::before\{[^}]*border-radius:50%/);
+ assert.match(css,/not a GPS accuracy indicator/);
+});
