@@ -18,8 +18,8 @@ function illustration() {
   return group;
 }
 function disposeObject(object:THREE.Object3D){object.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{for(const v of Object.values(m)){if(v instanceof THREE.Texture)v.dispose()}m.dispose()})}})}
-type Props={title:string;category:string;description:string;source:string;modelUrl?:string;onClose:()=>void};
-export default function MonumentViewer({title,category,description,source,modelUrl,onClose}:Props){
+type Props={title:string;category:string;description:string;source:string;modelUrl?:string;onClose:()=>void;inline?:boolean};
+export default function MonumentViewer({title,category,description,source,modelUrl,onClose,inline=false}:Props){
   const host=useRef<HTMLDivElement>(null);
   const controlsRef=useRef<OrbitControls|null>(null);
   const [rotating,setRotating]=useState(false);
@@ -50,6 +50,13 @@ export default function MonumentViewer({title,category,description,source,modelU
   },[modelUrl]);
   useEffect(()=>{setRotating(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)},[]);
   useEffect(()=>{if(controlsRef.current)controlsRef.current.autoRotate=rotating},[rotating]);
-  useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[onClose]);
+  useEffect(()=>{if(inline)return;const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[onClose,inline]);
+  if(inline) return <section className="map-model-preview" aria-label={`${title} 3D preview`}>
+    <div className="map-model-canvas" ref={host}/>
+    <div className="map-model-label"><strong>{title}</strong><span>{category}</span></div>
+    <p className="map-model-status" role="status">{status}</p>
+    <p className="map-model-note">{loaded?'Model accuracy and rights require verification.':'Generic illustration, not a reconstruction.'}</p>
+    <button type="button" className="map-model-toggle" onClick={()=>setRotating(value=>!value)} aria-pressed={rotating}>{rotating?'Pause rotation':'Start rotation'}</button>
+  </section>;
   return <div className="modal-backdrop" onClick={onClose}><section className="viewer-panel" role="dialog" aria-modal="true" aria-labelledby="viewer-title" onClick={e=>e.stopPropagation()}><header className="viewer-header"><div><span className="eyebrow">INTERACTIVE 3D HERITAGE</span><h2 id="viewer-title">{title}</h2><span className="category-tag">{category}</span></div><button className="close" onClick={onClose} aria-label="Close 3D viewer">×</button></header><div className="viewer-canvas" ref={host}/><p role="status">{status}</p><p className="viewer-warning">{loaded?'Model supplied by the operator; historical accuracy, provenance and rights must be verified.':'Generic artistic illustration only. This is not a model of the selected site or a measured archaeological reconstruction.'}</p><p>{description} <a className="source-link" href={source} target="_blank" rel="noreferrer">Read source ↗</a></p><button className="viewer-rotation" onClick={()=>setRotating(value=>!value)} aria-pressed={rotating}>{rotating?"Pause rotation":"Start rotation"}</button><p>Drag to rotate · Scroll or pinch to zoom · Right-drag to pan.</p></section></div>;
 }
