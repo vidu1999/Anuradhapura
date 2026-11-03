@@ -1,0 +1,11 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
+const compile = file => ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;
+const distanceUrl = `data:text/javascript;base64,${Buffer.from(compile('src/data/distance.ts')).toString('base64')}`;
+const source = compile('src/data/routing.ts').replace("'./distance'", `'${distanceUrl}'`);
+const routing = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+test('nearest site uses real straight-line distance and handles an empty collection',()=>{const p={latitude:8.35,longitude:80.396};const sites=[{id:'far',latitude:8.37,longitude:80.4},{id:'near',latitude:8.3501,longitude:80.396}];assert.equal(routing.nearestSite(p,sites).id,'near');assert.equal(routing.nearestSite(p,[]),null)});
+test('route coordinates are converted to leaflet order and invalid responses rejected',()=>{const result=routing.parseRoute({code:'Ok',routes:[{distance:120,duration:30,geometry:{type:'LineString',coordinates:[[80.39,8.35],[80.40,8.36]]}}]});assert.deepEqual(result.points,[[8.35,80.39],[8.36,80.4]]);assert.throws(()=>routing.parseRoute({code:'NoRoute'}));assert.throws(()=>routing.parseRoute({code:'Ok',routes:[{distance:5,duration:2,geometry:{type:'LineString',coordinates:[[0,500],[0,0]]}}]}))});
+test('heading only shown with a valid moving GPS fix',()=>{assert.equal(routing.travelHeading(90,0),null);assert.equal(routing.travelHeading(null,1),null);assert.equal(routing.headingLabel(routing.travelHeading(90,1)),'E · 90°');assert.equal(routing.headingLabel(routing.travelHeading(359,1)),'N · 359°')});
