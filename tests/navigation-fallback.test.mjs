@@ -1,0 +1,9 @@
+import {test} from 'node:test';
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import ts from 'typescript';
+const code=ts.transpileModule(readFileSync('src/data/navigation-fallback.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;
+const {initializeNavigationMap,navigationFailureMessage}=await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
+test('WebGL initialization failure is caught with a clear 2D fallback',()=>{const failure=initializeNavigationMap(()=>{throw new Error('WebGL2 is required')});assert.equal(failure.map,null);assert.match(navigationFailureMessage(failure.error),/2D map/);assert.match(navigationFailureMessage(failure.error),/GPS and road routing remain available/)});
+test('successful initialization passes the map through and other errors do not claim WebGL failure',()=>{const fake={id:1};assert.equal(initializeNavigationMap(()=>fake).map,fake);assert.doesNotMatch(navigationFailureMessage(new Error('other error')),/requires WebGL2/)});
+test('fallback switches out of 3D without stopping the location watch',()=>{const parent=readFileSync('src/components/HeritageMap.tsx','utf8');assert.match(parent,/onUnavailable=\{message=>\{setNavigation\(false\);setNavigationNotice\(message\)\}\}/);assert.match(parent,/center=\{position\?\[position\.latitude,position\.longitude\]/)});
