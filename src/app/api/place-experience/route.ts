@@ -13,7 +13,7 @@ async function generate(key:string,model:string,prompt:string,image:boolean):Pro
    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:image?{responseModalities:['TEXT','IMAGE']}:{maxOutputTokens:800,temperature:0.2}}),
    signal:AbortSignal.timeout(90_000),cache:'no-store'
   });
-  if(!response.ok)return {value:null,error:geminiError(response.status)};
+  if(!response.ok){let details:unknown;try{details=await response.json()}catch{}return {value:null,error:geminiError(response.status,details)}}
   const data=await response.json() as GeminiResponse;
   const value=image?readGeminiImage(data):readGeminiText(data);
   return value?{value,error:null}:{value:null,error:`Gemini did not return ${image?'an image':'text'} for this request.`};
@@ -25,7 +25,7 @@ export async function POST(request:Request){
  if(typeof id!=='string'||id.length>100)return NextResponse.json({error:'Choose a valid catalog site.'},{status:400,headers});
  const site=heritageSites.find(item=>item.id===id);
  if(!site)return NextResponse.json({error:'Site not found.'},{status:404,headers});
- const key=process.env.GEMINI_API_KEY;
+ const key=process.env.GEMINI_API_KEY?.trim();
  if(!key)return NextResponse.json({error:'Gemini is not configured. Add GEMINI_API_KEY to .env.local on the server and restart it.'},{status:503,headers});
  // Use only the server catalog, not client-supplied prompts or coordinates. Sources are references,
  // not independently fetched or validated by this endpoint.
