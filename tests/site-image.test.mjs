@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import ts from 'typescript';
+const code=ts.transpileModule(readFileSync('src/lib/site-image.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;
+const {generateSiteImage,readGeneratedImage,imageError}=await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
+const args={key:'test-key',textModel:'openai/gpt-4o-mini',imageModel:'google/gemini-2.5-flash-image',site:{id:'bodhi',name:'Jaya Sri Maha Bodhi',category:'Sacred Tree',description:'A sacred tree'},signal:new AbortController().signal};
+const image='data:image/png;base64,aGVsbG8=';
+test('uses OpenRouter Responses server tool with Gemini image model and catalog context',async()=>{let seen;const result=await generateSiteImage(args,async(url,options)=>{seen={url,options};return Response.json({output:[{type:'openrouter:image_generation',status:'completed',result:image}]})});assert.equal(result,image);assert.equal(seen.url,'https://openrouter.ai/api/v1/responses');const body=JSON.parse(seen.options.body);assert.equal(body.tools[0].type,'openrouter:image_generation');assert.equal(body.tools[0].parameters.model,args.imageModel);assert.equal(body.tool_choice,'required');assert.match(body.input,/Jaya Sri Maha Bodhi/);assert.equal(seen.options.redirect,'error')});
+test('rejects absent, incomplete, external and unsafe results',()=>{assert.equal(readGeneratedImage({output:[]}),null);assert.equal(readGeneratedImage({output:[{type:'openrouter:image_generation',status:'failed',result:image}]}),null);assert.equal(readGeneratedImage({output:[{type:'openrouter:image_generation',status:'completed',result:'https://example.com/a.png'}]}),null);assert.equal(readGeneratedImage({output:[{type:'openrouter:image_generation',status:'completed',imageUrl:image}]}),image)});
+test('provider errors do not expose raw response',async()=>{await assert.rejects(()=>generateSiteImage(args,async()=>new Response('secret error',{status:402})),e=>e.status===402&&!e.message.includes('secret'));assert.match(imageError(402),/credits/)});

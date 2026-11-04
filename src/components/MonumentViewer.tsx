@@ -42,7 +42,7 @@ export default function MonumentViewer({title,category,description,source,modelU
       const bounds=new THREE.Box3().setFromObject(gltf.scene);const size=bounds.getSize(new THREE.Vector3());const center=bounds.getCenter(new THREE.Vector3());const max=Math.max(size.x,size.y,size.z);
       if(!Number.isFinite(max)||max<=0){disposeObject(gltf.scene);fallback();setStatus('Model has no visible geometry. Showing a generic illustration instead.');return}
       // Normalize and center arbitrary GLBs so their original scale or origin cannot hide them.
-      const wrapper=new THREE.Group();const scale=3/max;gltf.scene.scale.multiplyScalar(scale);gltf.scene.position.sub(center.multiplyScalar(scale));wrapper.add(gltf.scene);scene.add(wrapper);controls.target.set(0,0,0);controls.update();setLoaded(true);setStatus('Ruwanwelisaya model loaded.');
+      const wrapper=new THREE.Group();const scale=3/max;gltf.scene.scale.multiplyScalar(scale);gltf.scene.position.sub(center.multiplyScalar(scale));wrapper.add(gltf.scene);scene.add(wrapper);controls.target.set(0,0,0);controls.update();setLoaded(true);setStatus(`${title} model loaded.`);
     },undefined,()=>{fallback();if(!disposed)setStatus('Model could not be loaded. Showing a generic illustration instead.')})}else fallback();
     const resize=()=>{const w=element.clientWidth,h=element.clientHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()};const observer=new ResizeObserver(resize);observer.observe(element);resize();
     let frame=0;const render=()=>{controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(render)};render();
