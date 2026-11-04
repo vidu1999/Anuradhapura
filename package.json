@@ -10,9 +10,11 @@
     "test": "node --test tests/*.test.mjs",
     "postinstall": "node scripts/copy-draco.mjs && node scripts/copy-map-worker.mjs",
     "predev": "node scripts/copy-draco.mjs && node scripts/copy-map-worker.mjs",
-    "prebuild": "node scripts/copy-draco.mjs && node scripts/copy-map-worker.mjs"
+    "prebuild": "node scripts/copy-draco.mjs && node scripts/copy-map-worker.mjs",
+    "pretest": "node scripts/copy-draco.mjs && node scripts/copy-map-worker.mjs"
   },
   "dependencies": {
+    "@google/genai": "^2.32.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "maplibre-gl": "^6.16.0",
