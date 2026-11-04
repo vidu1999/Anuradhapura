@@ -1,6 +1,6 @@
 # HeritageVerse
 
-A responsive Next.js heritage exploration prototype for Anuradhapura. It includes a 2D OpenStreetMap map, 30 requested catalog records (some awaiting coordinate review), opt-in live browser location and straight-line distances, a 3D monument viewer, an opt-in Gemini AI guide, locally saved notes, and partial English/Sinhala/Tamil interface text.
+A responsive Next.js heritage exploration prototype for Anuradhapura. It includes a 2D OpenStreetMap map, 30 requested catalog records (some awaiting coordinate review), opt-in live browser location and straight-line distances, a 3D monument viewer, an opt-in OpenRouter AI guide, locally saved notes, and partial English/Sinhala/Tamil interface text.
 
 ## Run on Windows
 
@@ -48,16 +48,16 @@ To enable on-demand generated stories and 3D-style illustrations, copy `.env.exa
 
 ### King Dutugemunu AI guide
 
-Open **AI Guide** from the 3D navigation screen or **Meet the guide** on the selected-site panel. The companion is an AI persona inspired by the historical king, not a historical record. It receives the selected catalog site's name, category, period, description, history, facts and reference URL plus the visitor's chat messages. No GPS position or journal data is sent automatically; visitors must avoid including private information in their messages. Conversation is held in React memory while the page remains open and is cleared on refresh or with **Clear**. The latest six exchanges are sent for context. Select English, Sinhala or Tamil for replies; output quality and historical accuracy are not guaranteed. Catalog links are references, not retrieved or verified source material, and some are UNESCO city-level context.
+Open **AI Guide** from the 3D navigation screen or **Meet the guide** on the selected-site panel. The companion is an AI persona inspired by the historical king, not a historical record. It sends the selected catalog site's name, category, period, description, history, facts and reference URL plus the visitor's chat messages to OpenRouter and its selected model provider. No GPS position or journal data is sent automatically; visitors must avoid including private information in their messages. Conversation is held in React memory while the page remains open and is cleared on refresh or with **Clear**. The latest six exchanges are sent for context. Select English, Sinhala or Tamil for replies; output quality and historical accuracy are not guaranteed. Catalog links are references, not retrieved or verified source material, and some are UNESCO city-level context.
 
-`POST /api/ai-guide` validates a maximum 24 KB body, 1,200 characters per message, up to six completed exchanges, a catalog site ID and one of the three language codes. It invokes the official `@google/genai` SDK server-side using `GEMINI_API_KEY` and optional `GEMINI_GUIDE_MODEL` (default `gemini-2.5-flash`). Errors are sanitized; API keys never go to the browser. The 20-requests-per-minute in-memory process-wide limit is a prototype guard only: it is not a per-user limit, persistent across restarts, shared across instances, or a substitute for authentication, distributed throttling, budget limits and monitoring before deployment. Gemini can be wrong or manipulated, even with safety instructions; historical review and source-based retrieval should precede public use. Text-to-speech, voice input, quizzes and RAG are not implemented.
+`POST /api/ai-guide` validates a maximum 24 KB body, 1,200 characters per message, up to six completed exchanges, a catalog site ID and one of the three language codes. It calls OpenRouter server-side using `OPENROUTER_API_KEY` and optional `OPENROUTER_GUIDE_MODEL` (default `openrouter/free`, which selects an available free model). The selected model and provider may change. Free models have limits and availability constraints; if you configure a paid model, charges may apply. Errors are sanitized; API keys never go to the browser. The 20-requests-per-minute in-memory process-wide limit is a prototype guard only: it is not a per-user limit, persistent across restarts, shared across instances, or a substitute for authentication, distributed throttling, budget limits and monitoring before deployment. The model can be wrong or manipulated, even with safety instructions; historical review and source-based retrieval should precede public use. Text-to-speech, voice input, quizzes and RAG are not implemented.
 
 PowerShell setup and API check, from the repository directory:
 
 ```powershell
 npm ci
 Copy-Item .env.example .env.local # Skip this if you already have .env.local
-notepad .env.local # Set GEMINI_API_KEY locally; never share it
+notepad .env.local # Set OPENROUTER_API_KEY locally; never share it
 npm test
 npm run build
 npm run dev
@@ -70,4 +70,6 @@ $body = @{ siteId = 'ruwan'; language = 'EN'; message = 'Tell me about this plac
 Invoke-RestMethod -Method Post -Uri 'http://localhost:3000/api/ai-guide' -ContentType 'application/json' -Body $body
 ```
 
-Change `language` to `SI` or `TA` for a language check. Missing key returns 503; malformed input returns 400. Google connectivity requires a supported account, available model, network access and appropriate API key permissions, and may incur charges. Never include your key in this test request or screenshots.
+Change `language` to `SI` or `TA` for a language check. Missing key returns 503; malformed input returns 400. OpenRouter connectivity requires a supported account, available model, network access and appropriate API key permissions. The configured model may incur charges. Never include your key in this test request or screenshots.
+
+The existing **Generate AI experience** feature remains separate and still requires `GEMINI_API_KEY`; an OpenRouter key enables the guide chat only, not Gemini image generation.

@@ -38,12 +38,12 @@ export async function handleGuide(request:Request,options:GuideDependencies):Pro
  let body:unknown;try{body=await limitedJson(request)}catch(error){return json({error:error instanceof Error&&error.message==='large'?'Request is too large.':'Invalid JSON request.'},error instanceof Error&&error.message==='large'?413:400)}
  const input=validateGuideInput(body);if(!input)return json({error:'Invalid message, history, site or language. Messages must be 1–1200 characters; history is limited to six exchanges.'},400);
  const site=options.sites.find(s=>s.id===input.siteId);if(!site)return json({error:'Selected site not found.'},404);
- const key=options.key?.trim();if(!key)return json({error:'AI guide is not configured. Set GEMINI_API_KEY on the server and restart.'},503);
- const model=options.model?.trim()||'gemini-2.5-flash';if(!/^gemini-[a-z0-9.-]{1,80}$/i.test(model))return json({error:'AI guide model configuration is invalid.'},503);
+ const key=options.key?.trim();if(!key)return json({error:'AI guide is not configured. Set OPENROUTER_API_KEY on the server and restart.'},503);
+ const model=options.model?.trim()||'openrouter/free';if(!/^[a-z0-9][a-z0-9._-]{0,63}\/[a-z0-9][a-z0-9._:-]{0,127}$/i.test(model))return json({error:'AI guide model configuration is invalid.'},503);
  if(!options.allow())return json({error:'Guide is busy. Please wait a minute and try again.'},429);
  try{
   const text=await options.generate({key,model,instruction:guideInstruction(site,input.language),messages:[...input.history,{role:'user',text:input.message}],signal:AbortSignal.timeout(45_000)});
   if(typeof text!=='string'||!text.trim())return json({error:'The AI guide returned no answer. Try rephrasing your question.'},502);
   return json({reply:text.trim().slice(0,1200)},200);
- }catch(error){const status=typeof error==='object'&&error!==null&&'status' in error&&typeof error.status==='number'?error.status:0;return json({error:status?options.errorMessage(status):'Could not contact Gemini or the request timed out. Please try again.'},status===429?429:502)}
+ }catch(error){const status=typeof error==='object'&&error!==null&&'status' in error&&typeof error.status==='number'?error.status:0;return json({error:status?options.errorMessage(status):'Could not contact OpenRouter or the request timed out. Please try again.'},status===429?429:502)}
 }

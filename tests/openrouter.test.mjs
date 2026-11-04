@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import ts from 'typescript';
+const source=readFileSync('src/lib/openrouter.ts','utf8');
+const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;
+const {generateOpenRouter,openRouterError}=await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
+const args={key:'test-secret',model:'openrouter/free',instruction:'Safe context',messages:[{role:'user',text:'Hi'},{role:'model',text:'Hello'},{role:'user',text:'Next'}],signal:new AbortController().signal};
+test('adapter sends bounded conversation and selected context to OpenRouter server-side',async()=>{let seen;const fetcher=async(url,options)=>{seen={url,options};return new Response(JSON.stringify({choices:[{message:{content:'Answer'}}]}),{status:200})};assert.equal(await generateOpenRouter(args,fetcher),'Answer');assert.equal(seen.url,'https://openrouter.ai/api/v1/chat/completions');assert.equal(seen.options.headers.Authorization,'Bearer test-secret');const body=JSON.parse(seen.options.body);assert.equal(body.model,'openrouter/free');assert.deepEqual(body.messages.map(m=>m.role),['system','user','assistant','user']);assert.equal(seen.options.redirect,'error')});
+test('provider failure is safely reported without exposing key or raw errors',async()=>{await assert.rejects(()=>generateOpenRouter(args,async()=>new Response('secret diagnostic',{status:401})),error=>error.status===401&&!error.message.includes('secret'));assert.match(openRouterError(401),/OPENROUTER_API_KEY/);assert.match(openRouterError(402),/credits/);assert.match(openRouterError(429),/rate limit/)});
+test('unexpected provider response does not invent an answer',async()=>{assert.equal(await generateOpenRouter(args,async()=>Response.json({choices:[]})),undefined)});
