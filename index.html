@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>Ruwanwelisaya — 3D reconstruction from one photograph</title>
+    <meta
+      name="description"
+      content="A procedural, photograph-textured 3D model of the Ruwanwelisaya Maha Seya stupa in Anuradhapura, Sri Lanka, built from a single uploaded image."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+
+      <!-- ---------------------------------------------------------------- -->
+      <header class="brand">
+        <div class="brand__eyebrow">Anuradhapura · Sri Lanka</div>
+        <h1 class="brand__title">Ruwanwelisaya</h1>
+        <p class="brand__sub">Maha Seya · 3D reconstruction from a single photograph</p>
+      </header>
+
+      <!-- ---------------------------------------------------------------- -->
+      <aside class="panel" id="panel">
+        <button class="panel__toggle" id="panelToggle" aria-label="Toggle controls">
+          <span></span><span></span><span></span>
+        </button>
+
+        <section class="panel__body">
+          <div class="group">
+            <div class="group__label">Camera</div>
+            <div class="views">
+              <button class="view" data-view="front">Front</button>
+              <button class="view" data-view="three-quarter">3/4</button>
+              <button class="view" data-view="aerial">Aerial</button>
+              <button class="view" data-view="eye">Eye level</button>
+              <button class="view" data-view="detail">Detail</button>
+            </div>
+          </div>
+
+          <div class="group">
+            <div class="group__label">Light</div>
+            <label class="slider">
+              <span>Sun</span>
+              <input id="sun" type="range" min="0" max="100" value="62" />
+              <em id="sunLabel">afternoon</em>
+            </label>
+            <label class="switch">
+              <input id="turntable" type="checkbox" checked />
+              <span>Turntable</span>
+            </label>
+          </div>
+
+          <div class="group">
+            <div class="group__label">Surface</div>
+            <label class="switch">
+              <input id="textures" type="checkbox" checked />
+              <span>Photographic textures</span>
+            </label>
+            <label class="switch">
+              <input id="wireframe" type="checkbox" />
+              <span>Wireframe</span>
+            </label>
+            <label class="switch">
+              <input id="trees" type="checkbox" checked />
+              <span>Surroundings</span>
+            </label>
+          </div>
+
+          <div class="group">
+            <div class="group__label">Model</div>
+            <div class="downloads">
+              <a id="dlGlb" class="btn btn--primary" href="/models/ruwanwelisaya.glb" download>
+                Download .glb
+              </a>
+              <button id="dlObj" class="btn">.obj</button>
+              <button id="dlStl" class="btn">.stl</button>
+            </div>
+          </div>
+
+          <div class="group stats" id="stats">
+            <div class="group__label">Geometry</div>
+            <dl>
+              <div><dt>Dome</dt><dd>85 m ⌀ · 39.6 m high</dd></div>
+              <div><dt>Finial tip</dt><dd>—</dd></div>
+              <div><dt>Reliefs</dt><dd>224 elephants</dd></div>
+              <div><dt>Triangles</dt><dd>—</dd></div>
+              <div><dt>Textures</dt><dd>9 maps from the photo</dd></div>
+            </dl>
+          </div>
+        </section>
+      </aside>
+
+      <!-- ---------------------------------------------------------------- -->
+      <div class="hint">
+        drag to orbit · scroll to zoom · right-drag to pan
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="overlay__inner">
+          <div class="overlay__ring"></div>
+          <div class="overlay__text">
+            <strong>Building the Maha Seya</strong>
+            <span id="overlayStatus">reading textures…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="credit">
+        Textures sampled from the uploaded photograph.<br />
+        Model generated procedurally.
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

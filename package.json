@@ -1,0 +1,19 @@
+{
+  "name": "ruwanwelisaya-3d",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Procedural 3D reconstruction of the Ruwanwelisaya Maha Seya stupa, textured from a single photograph.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "textures": "python3 tools/build_textures.py"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

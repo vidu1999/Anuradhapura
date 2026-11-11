@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TRELLIS · image → 3D</title>
+    <meta
+      name="description"
+      content="Image-to-3D asset generation with microsoft/TRELLIS: upload one image, get a textured GLB."
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/three/build/three.module.js",
+          "three/addons/": "/vendor/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app">
+      <!-- ------------------------------------------------------------- -->
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand__mark"></span>
+          <div>
+            <h1>TRELLIS <span>image → 3D</span></h1>
+            <p>Structured 3D Latents · single image to textured GLB</p>
+          </div>
+        </div>
+        <div class="status" id="status">
+          <span class="chip chip--muted" id="statusChip">connecting…</span>
+          <span class="status__detail" id="statusDetail"></span>
+        </div>
+      </header>
+
+      <div class="banner" id="banner" hidden>
+        <strong>Smoke-test backend.</strong>
+        <span id="bannerText"></span>
+      </div>
+
+      <!-- ------------------------------------------------------------- -->
+      <main class="layout">
+        <!-- left: input -->
+        <section class="panel panel--input">
+          <div class="panel__head">
+            <h2>1 · Image</h2>
+            <button class="link" id="clearBtn" hidden>clear</button>
+          </div>
+
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/bmp" hidden />
+            <img id="thumb" alt="" hidden />
+            <div class="dropzone__empty" id="dropEmpty">
+              <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+                <path
+                  d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <strong>Drop an image</strong>
+              <span>or click to browse · PNG / JPG / WEBP</span>
+            </div>
+          </label>
+
+          <p class="hint">
+            A single object on a plain background, filling most of the frame, gives the
+            best result. Backgrounds are removed automatically.
+          </p>
+
+          <div class="panel__head">
+            <h2>2 · Options</h2>
+            <button class="link" id="resetBtn">reset</button>
+          </div>
+
+          <div class="grid">
+            <label class="field">
+              <span>Seed</span>
+              <input type="number" id="seed" value="42" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span>Texture size</span>
+              <select id="textureSize">
+                <option>512</option>
+                <option selected>1024</option>
+                <option>2048</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Structure steps</span>
+              <input type="number" id="ssSteps" value="12" min="1" max="50" step="1" />
+            </label>
+            <label class="field">
+              <span>Structure CFG</span>
+              <input type="number" id="ssCfg" value="7.5" min="0" max="20" step="0.5" />
+            </label>
+            <label class="field">
+              <span>Latent steps</span>
+              <input type="number" id="slatSteps" value="12" min="1" max="50" step="1" />
+            </label>
+            <label class="field">
+              <span>Latent CFG</span>
+              <input type="number" id="slatCfg" value="3" min="0" max="20" step="0.5" />
+            </label>
+            <label class="field">
+              <span>Simplify</span>
+              <input type="number" id="simplify" value="0.95" min="0" max="0.99" step="0.01" />
+            </label>
+            <label class="field field--check">
+              <input type="checkbox" id="exportPly" />
+              <span>Also export splat PLY</span>
+            </label>
+          </div>
+
+          <button class="primary" id="generateBtn" disabled>Generate 3D model</button>
+
+          <div class="progress" id="progressWrap" hidden>
+            <div class="progress__bar"><div class="progress__fill" id="progressFill"></div></div>
+            <div class="progress__meta">
+              <span id="progressStage">starting…</span>
+              <span id="progressPct">0%</span>
+            </div>
+          </div>
+
+          <pre class="log" id="log" hidden></pre>
+        </section>
+
+        <!-- right: viewer -->
+        <section class="panel panel--view">
+          <div class="panel__head">
+            <h2>3 · Result</h2>
+            <div class="viewer__tools">
+              <button class="tool" id="turntableBtn" title="Toggle turntable">⟳</button>
+              <button class="tool" id="wireBtn" title="Toggle wireframe">◫</button>
+              <button class="tool" id="gridBtn" title="Toggle grid">▦</button>
+              <button class="tool" id="resetViewBtn" title="Reset camera">⌂</button>
+            </div>
+          </div>
+
+          <div class="viewer" id="viewer">
+            <div class="viewer__empty" id="viewerEmpty">
+              <span>Your model will appear here</span>
+            </div>
+          </div>
+
+          <div class="downloads" id="downloads" hidden>
+            <a class="primary primary--wide" id="downloadGlb" download>Download .glb</a>
+            <a class="ghost" id="downloadPly" download hidden>.ply</a>
+            <a class="ghost" id="downloadPreview" download hidden>.png</a>
+          </div>
+
+          <dl class="stats" id="stats" hidden></dl>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>Model: <code id="modelName">microsoft/TRELLIS-image-large</code></span>
+        <span class="dot">·</span>
+        <span>Every 3D tensor, sampler and mesh export is produced by the vendored TRELLIS pipeline.</span>
+      </footer>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

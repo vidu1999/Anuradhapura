@@ -1,0 +1,8 @@
+# Service layer only. The model itself needs the full TRELLIS/Dora stack —
+# install that with ./install.sh (it runs TRELLIS' own setup.sh).
+fastapi>=0.111
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pillow>=10.0
+numpy>=1.24
+trimesh>=4.0
